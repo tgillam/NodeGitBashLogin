@@ -1,69 +1,43 @@
-const read = require('readline').createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
-
 const readline = require("readline")
 
-
-const stdout = process.stdout
-const stdin = process.stdin
-
-let username = ''
-let password = ''
-
-const pn = (data, key) => {
-    const c = data
-    switch (c) {
-        case '\u0004': // Ctrl-d
-        case '\r':
-        case '\n':
-            return enter()
-        case '\u0003': // Ctrl-c
-            return ctrlc()
-        default:
-            // backspace
-            if (c.charCodeAt(0) === 8) return
-            else return newchar(c)
-    }
-}
-
-login()
-
-async function login(){
-  await enterUsername()
-}
-
-
-async function enterUsername(){
-  read.question('Username: ', name => {
-    username = name
-    read.close();
-    enterPassword()
+const windowsPrompt = (query, password) => new Promise((resolve, reject) => {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
   });
-}
+  const stdin = process.openStdin();
+  process.stdin.on('data', char => {
+    char = char + '';
+    if(rl.line.length > 15){
+      char = '\u0004'
+    }
+    switch (char) {
+      case '\n':
+      case '\r':
+      case '\u0004':
+        stdin.pause();
+        break;
+      default:
+        if(password){
+          process.stdout.clearLine();
+          readline.cursorTo(process.stdout, 0);
+          process.stdout.write(query + Array(rl.line.length + 1).join('*'));
+        }
+        break;
+    }
+  });
+  rl.question(query, value => {
+    rl.history = rl.history.slice(1);
+    resolve(value);
+  });
+});
 
-async function enterPassword(){
-  stdout.write("Password: ")
-  stdin.setRawMode(true)
-  stdin.resume()
-  stdin.setEncoding('utf-8')
-  stdin.on("data", pn)
-}
+const main = async () => {
+  console.log('Alias: ');
+  const alias = await windowsPrompt('> ', false);
+  console.log('Password: ');
+  const password = await windowsPrompt('> ', true);
+  console.log(alias + ':' + password)
+};
 
-function enter() {
-    stdin.removeListener('data', pn)
-    stdin.setRawMode(false)
-    stdin.pause()
-}
-
-function ctrlc() {
-    stdin.removeListener('data', pn)
-    stdin.setRawMode(false)
-    stdin.pause()
-}
-
-function newchar(c) {
-    password += c
-    stdout.write("*")
-}
+main().catch(error => console.error(error));
